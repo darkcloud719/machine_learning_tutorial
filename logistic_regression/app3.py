@@ -1,64 +1,58 @@
-import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
+import pandas as pd
 
 # ============================================================
-# 1. Simple dataset (spam vs ham)
+# 1. Sample text data (documents)
 # ============================================================
 texts = [
-    "Win money now",                # spam
-    "Limited offer click now",      # spam
-    "Congratulations you won prize",# spam
-    "Cheap loan available",         # spam
-    "Hi how are you",               # ham
-    "Let's have lunch tomorrow",    # ham
-    "Are you coming to meeting",    # ham
-    "See you later",                # ham
-]
-
-labels = [
-    1, 1, 1, 1,   # spam
-    0, 0, 0, 0    # ham
+    "I love machine learning",
+    "I love AI",
+    "machine learning is fun"
 ]
 
 # ============================================================
-# 2. Convert text → numerical features (TF-IDF)
+# 2. Create TF-IDF vectorizer
 # ============================================================
 vectorizer = TfidfVectorizer()
+
+# Fit vocabulary and transform text into numerical features
+# This converts text → TF-IDF matrix
 X = vectorizer.fit_transform(texts)
 
 # ============================================================
-# 3. Train / test split
+# 3. Print raw TF-IDF sparse matrix
 # ============================================================
-X_train, X_test, y_train, y_test = train_test_split(
-    X, labels, test_size=0.25, random_state=42
+# This is a sparse matrix representation:
+# (row_index, column_index) -> TF-IDF value
+print(X)
+
+# ============================================================
+# 4. Get feature names (words)
+# ============================================================
+# This shows which word corresponds to each column index
+# Example: column 0 = "ai", column 1 = "fun", etc.
+print(vectorizer.get_feature_names_out())
+
+# ============================================================
+# 5. Convert sparse matrix to dense DataFrame
+# ============================================================
+# X.toarray() converts sparse matrix → full numeric matrix
+# columns=feature names makes it human-readable
+df = pd.DataFrame(
+    X.toarray(),
+    columns=vectorizer.get_feature_names_out()
 )
 
 # ============================================================
-# 4. Build Logistic Regression model
+# 6. Print readable table
 # ============================================================
-model = LogisticRegression()
-model.fit(X_train, y_train)
+# Each row = one sentence
+# Each column = TF-IDF score of a word
+print(df)
 
 # ============================================================
-# 5. Predict
+# 7. Print matrix shape
 # ============================================================
-y_pred = model.predict(X_test)
-
-# ============================================================
-# 6. Evaluation
-# ============================================================
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print("\nClassification Report:\n", classification_report(y_test, y_pred))
-
-# ============================================================
-# 7. Test on new email
-# ============================================================
-new_text = ["Congratulations you won money now"]
-new_X = vectorizer.transform(new_text)
-
-prediction = model.predict(new_X)
-
-print("\nNew email prediction:", "SPAM" if prediction[0] == 1 else "HAM")
+# (number of documents, number of unique words)
+# rows = sentences, columns = vocabulary size
+print(X.shape)

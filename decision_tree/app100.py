@@ -1,63 +1,96 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 
-# =====================================================
-# 1. 產生資料
-# =====================================================
-
-np.random.seed(42)
-
-X = np.linspace(0, 10, 500).reshape(-1, 1)
-y = np.sin(X).ravel() + np.random.normal(0, 0.2, X.shape[0])
-
-# 切 train / test
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix
 )
 
-# =====================================================
-# 2. 訓練 Gradient Boosting Model
-# =====================================================
+from catboost import CatBoostClassifier
 
-model = GradientBoostingRegressor(
-    n_estimators=500,
-    learning_rate=0.05,
-    max_depth=3,
+# =========================
+# 1. Load dataset
+# =========================
+
+iris = load_iris()
+
+X = iris.data
+y = iris.target
+
+# =========================
+# 2. Train / Test Split
+# =========================
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+# =========================
+# 3. Build CatBoost model
+# =========================
+
+model = CatBoostClassifier(
+    iterations=100,      # number of trees
+    learning_rate=0.1,
+    depth=3,
+    loss_function="MultiClass",
+    verbose=0,
     random_state=42
 )
 
+# =========================
+# 4. Train model
+# =========================
+
 model.fit(X_train, y_train)
 
-# =====================================================
-# 3. 計算每一輪 boosting 的 deviance
-# =====================================================
+# =========================
+# 5. Predict
+# =========================
 
-train_deviance = []
-test_deviance = []
+y_pred = model.predict(X_test)
 
-for y_pred_train, y_pred_test in zip(
-    model.staged_predict(X_train),
-    model.staged_predict(X_test)
-):
-    train_deviance.append(mean_squared_error(y_train, y_pred_train))
-    test_deviance.append(mean_squared_error(y_test, y_pred_test))
+# =========================
+# 6. Evaluation
+# =========================
 
-# =====================================================
-# 4. 畫圖
-# =====================================================
+print("=== Test Set Evaluation ===")
 
-plt.figure(figsize=(7, 5))
+print("Accuracy:", accuracy_score(y_test, y_pred))
 
-plt.plot(train_deviance, color="blue", label="Training Set Deviance")
-plt.plot(test_deviance, color="red", label="Test Set Deviance")
+print("\nConfusion Matrix:\n")
+print(confusion_matrix(y_test, y_pred))
 
-plt.title("Deviance")
-plt.xlabel("Boosting Iterations")
-plt.ylabel("Deviance")
+print("\nClassification Report:\n")
+print(classification_report(y_test, y_pred))
 
-plt.legend()
-plt.show()
+# =========================
+# 7. Cross Validation
+# =========================
+
+skf = StratifiedKFold(
+    n_splits=5,
+    shuffle=True,
+    random_state=42
+)
+
+cv_scores = cross_val_score(
+    model,
+    X,
+    y,
+    cv=skf,
+    scoring="accuracy"
+)
+
+print("\n=== Cross Validation ===")
+print("Scores:", cv_scores)
+print("Mean Accuracy:", np.mean(cv_scores))
+print("Std:", np.std(cv_scores))

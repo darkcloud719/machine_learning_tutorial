@@ -1,70 +1,69 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.datasets import make_moons
-from sklearn.svm import SVC
+from sklearn.svm import SVR
+from sklearn.model_selection import train_test_split
 
-# =========================
-# 1. Create 2D dataset
-# =========================
+# =====================================================
+# 1. 產生非線性資料
+# =====================================================
 
-X, y = make_moons(n_samples=200, noise=0.2, random_state=42)
+np.random.seed(42)
 
-# =========================
-# 2. Train SVM model
-# =========================
+X = np.linspace(0, 10, 200).reshape(-1, 1)
 
-model = SVC(
-    kernel="rbf",   # nonlinear boundary
-    C=1.0,
-    gamma=1.0
+# 真實 function + noise
+y = np.sin(X).ravel() + np.random.normal(0, 0.2, X.shape[0])
+
+# =====================================================
+# 2. 切分資料
+# =====================================================
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42
 )
 
-model.fit(X, y)
+# =====================================================
+# 3. 建立 SVR 模型
+# =====================================================
 
-# =========================
-# 3. Create mesh grid (for visualization)
-# =========================
-
-x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-
-xx, yy = np.meshgrid(
-    np.linspace(x_min, x_max, 300),
-    np.linspace(y_min, y_max, 300)
+model = SVR(
+    kernel="rbf",   # 非線性核心
+    C=10,           # 控制錯誤懲罰
+    epsilon=0.1     # ε-tube 容忍區
 )
 
-# =========================
-# 4. Predict on grid
-# =========================
+# =====================================================
+# 4. 訓練模型
+# =====================================================
 
-Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-Z = Z.reshape(xx.shape)
+model.fit(X_train, y_train)
 
-# =========================
-# 5. Plot decision boundary
-# =========================
+# =====================================================
+# 5. 預測
+# =====================================================
+
+y_pred = model.predict(X_test)
+
+# =====================================================
+# 6. 視覺化 SVR 曲線
+# =====================================================
+
+X_grid = np.linspace(0, 10, 500).reshape(-1, 1)
+y_grid = model.predict(X_grid)
 
 plt.figure(figsize=(8, 6))
 
-# decision boundary
-plt.contourf(xx, yy, Z, alpha=0.3, cmap=plt.cm.coolwarm)
+# 原始資料
+plt.scatter(X, y, color="blue", label="Data")
 
-# data points
-plt.scatter(X[:, 0], X[:, 1], c=y, cmap=plt.cm.coolwarm, edgecolors="k")
+# SVR 預測曲線
+plt.plot(X_grid, y_grid, color="red", linewidth=2, label="SVR prediction")
 
-# support vectors
-plt.scatter(
-    model.support_vectors_[:, 0],
-    model.support_vectors_[:, 1],
-    s=100,
-    facecolors="none",
-    edgecolors="black",
-    label="Support Vectors"
-)
-
-plt.title("SVM Decision Boundary (RBF Kernel)")
-plt.xlabel("Feature 1")
-plt.ylabel("Feature 2")
+plt.title("Support Vector Regression (SVR)")
+plt.xlabel("X")
+plt.ylabel("y")
 plt.legend()
 plt.show()
